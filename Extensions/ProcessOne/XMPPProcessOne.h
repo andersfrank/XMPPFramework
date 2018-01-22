@@ -114,6 +114,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface XMPPStream (XMPPProcessOne)
 
+@property (nonatomic, assign, getter=isAttemptingRebind) BOOL attemptingRebind;
+
 /** Specific to XMPPProcessOne propreitary module */
 @property (nonatomic, readonly) BOOL supportsPush;
 /** Specific to XMPPProcessOne propreitary module */
@@ -121,6 +123,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /** Specific to XMPPProcessOne propreitary module */
 @property (nonatomic, readonly, nullable) NSString *rebindSessionID;
+
+- (BOOL)rebindSession:(NSString *)sessionID forJID:(XMPPJID *)jid withError:(NSError **)errPtr;
 
 @end
 NS_ASSUME_NONNULL_END

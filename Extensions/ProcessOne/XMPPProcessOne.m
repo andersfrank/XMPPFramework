@@ -3,6 +3,8 @@
 #import "XMPPInternal.h"
 #import "XMPPLogging.h"
 
+#import <objc/runtime.h>
+
 #if ! __has_feature(objc_arc)
 #warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
 #endif
@@ -179,12 +181,29 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 	return receipt;
 }
 
+// Rebind failed, reset rebind parameters
+- (void)xmppStream:(XMPPStream *)sender runFallbackAuthentication:(NSXMLElement *)error {
+    xmppStream.attemptingRebind = NO;
+    self.savedSessionID = nil;
+    self.savedSessionJID = nil;
+    self.savedSessionDate = nil;
+}
+
 - (void)xmppStreamDidAuthenticate:(XMPPStream *)sender
 {
-	if (!pushConfigurationSent)
-	{
-		[self sendPushConfiguration];
-	}
+    if (!xmppStream.isAttemptingRebind) {
+        if (!pushConfigurationSent)
+        {
+            [self sendPushConfiguration];
+        }
+        
+        // Store information we could use for rebind
+        NSString *streamID = [xmppStream rebindSessionID];
+        self.savedSessionID = streamID;
+        self.savedSessionJID = xmppStream.myJID;
+        self.savedSessionDate = [[NSDate alloc] init];
+    }
+    xmppStream.attemptingRebind = NO;
 }
 
 - (void)xmppStreamDidDisconnect:(XMPPStream *)sender withError:(NSError *)error
@@ -343,7 +362,7 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 	}
 	else
 	{
-		return XMPPHandleAuthResponseFailed;
+		return XMPPHandleAuthResponseCanFallback;
 	}
 }
 
@@ -357,6 +376,8 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void *IsAttemptingRebindKey = @"IsAttemptingRebindKey";
 
 @implementation XMPPStream (XMPPProcessOne)
 
@@ -377,12 +398,12 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 		}
 	}};
 
-	if (dispatch_get_specific(self.xmppQueueTag))
-		block();
-	else
-		dispatch_sync(self.xmppQueue, block);
-	
-	return result;
+    if (dispatch_get_specific(self.xmppQueueTag))
+        block();
+    else
+        dispatch_sync(self.xmppQueue, block);
+    
+    return result;
 }
 
 - (BOOL)supportsRebind
@@ -413,6 +434,51 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 - (NSString *)rebindSessionID
 {
 	return [[self rootElement] attributeStringValueForName:@"id"];
+}
+
+- (BOOL)rebindSession:(NSString *)sessionID forJID:(XMPPJID *)jid withError:(NSError **)errPtr {
+    __block BOOL result = YES;
+    __block NSError *err = nil;
+    
+    dispatch_block_t block = ^{ @autoreleasepool {
+        
+        if ([self supportsRebind])
+        {
+            self.attemptingRebind = YES;
+            XMPPRebindAuthentication *rebindAuth = [[XMPPRebindAuthentication alloc] initWithStream:self sessionID:sessionID sessionJID:jid];
+            
+            result = [self authenticate:rebindAuth error:&err];
+        }
+        else
+        {
+            NSString *errMsg = @"The server does not support rebind authentication.";
+            NSDictionary *info = @{NSLocalizedDescriptionKey : errMsg};
+            
+            err = [NSError errorWithDomain:XMPPStreamErrorDomain code:XMPPStreamUnsupportedAction userInfo:info];
+            
+            result = NO;
+        }
+    }};
+    
+    if (dispatch_get_specific(self.xmppQueueTag))
+        block();
+    else
+        dispatch_sync(self.xmppQueue, block);
+    
+    if (errPtr)
+        *errPtr = err;
+    
+    return result;
+}
+
+- (void)setAttemptingRebind:(BOOL)attemptingRebind {
+    objc_setAssociatedObject(self, IsAttemptingRebindKey, @(attemptingRebind), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (BOOL)isAttemptingRebind
+{
+    NSNumber *isAttemptingRebindWrapper = objc_getAssociatedObject(self, IsAttemptingRebindKey);
+    return [isAttemptingRebindWrapper boolValue];
 }
 
 @end

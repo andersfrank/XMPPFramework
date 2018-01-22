@@ -13,12 +13,16 @@ typedef NS_ENUM(NSInteger, XMPPHandleAuthResponse) {
 	                    // The delegate will be informed via xmppStreamDidAuthenticate:
 	
 	XMPPHandleAuthResponseContinue, // The authentication process is still ongoing.
+    
+    XMPPHandleAuthResponseCanFallback, // For authentication modes that can reattach to existing session,
+                        // gives the client developer the change to trigger a fallback methods
 };
 
 // Legacy fallback
-#define XMPP_AUTH_FAIL      XMPPHandleAuthResponseFailed
-#define XMPP_AUTH_SUCCESS   XMPPHandleAuthResponseSuccess
-#define XMPP_AUTH_CONTINUE  XMPPHandleAuthResponseContinue
+#define XMPP_AUTH_FAIL          XMPPHandleAuthResponseFailed
+#define XMPP_AUTH_SUCCESS       XMPPHandleAuthResponseSuccess
+#define XMPP_AUTH_CONTINUE      XMPPHandleAuthResponseContinue
+#define XMPP_AUTH_CAN_FALLBACK  XMPPHandleAuthResponseCanFallback
 
 NS_ASSUME_NONNULL_BEGIN
 @protocol XMPPSASLAuthentication <NSObject>
