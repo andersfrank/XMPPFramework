@@ -127,6 +127,7 @@ enum XMPPStreamConfig
 	NSTimeInterval keepAliveInterval;
 	dispatch_source_t keepAliveTimer;
 	NSTimeInterval lastSendReceiveTime;
+    NSTimeInterval lastSendTime;
 	NSData *keepAliveData;
 	
 	NSMutableArray *registeredModules;
@@ -4358,6 +4359,7 @@ enum XMPPStreamConfig
 	XMPPLogTrace();
 	
 	lastSendReceiveTime = [NSDate timeIntervalSinceReferenceDate];
+    lastSendTime = [NSDate timeIntervalSinceReferenceDate];
 	
 	if (tag == TAG_XMPP_WRITE_RECEIPT)
 	{
@@ -4773,8 +4775,10 @@ enum XMPPStreamConfig
 	if (state == STATE_XMPP_CONNECTED)
 	{
 		NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
-		NSTimeInterval elapsed = (now - lastSendReceiveTime);
+		NSTimeInterval elapsed = (now - lastSendTime);
 		
+        // Since process one will put us in "online push mode" if we don't seed a keep alive or a stanza
+        // we have introduced a new paramter lastSendTime, which we base the decision whether to send a keep alive upon.
 		if (elapsed < 0 || elapsed >= keepAliveInterval)
 		{
 			numberOfBytesSent += [keepAliveData length];
@@ -4789,6 +4793,7 @@ enum XMPPStreamConfig
 			// which would prevent the socket:didWriteDataWithTag: method from being called for some time.
 			
 			lastSendReceiveTime = [NSDate timeIntervalSinceReferenceDate];
+            lastSendTime = [NSDate timeIntervalSinceReferenceDate];
 		}
 	}
 }
