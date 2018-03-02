@@ -52,12 +52,19 @@ NS_ASSUME_NONNULL_BEGIN
  * 
  * After the pushConfiguration element has been set, you can change it at any time.
  * If you do, it will send the updated configuration options to the server.
- * 
- * To disable push, you can simply set the pushConfiguration to nil.
+ *
  * 
  * @see pushConfigurationContainer
 **/
 @property (readwrite, strong, nullable) NSXMLElement *pushConfiguration;
+
+/**
+ * Sends the push configuration packet that will unregister the connected resource for push notifications.
+ * Needs to be sent after authentication.
+ *
+ * To prevent the regular configuration is forwarded. Set pushConfiguration property to `nil` if not `nil` already.
+ **/
+- (void)sendDisablePushConfiguration;
 
 /**
  * Standby Mode.
@@ -81,6 +88,8 @@ NS_ASSUME_NONNULL_BEGIN
 **/
 - (XMPPElementReceipt *)goOnStandby;
 - (XMPPElementReceipt *)goOffStandby;
+
+
 
 /**
  * Methods to help create the pushConfiguration required to enable anything on the server.

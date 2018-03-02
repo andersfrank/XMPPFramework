@@ -142,19 +142,20 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 		[xmppStream sendElement:iq];
 		pushConfigurationSent = YES;
 	}
-	else
-	{
-		// <iq type='set'>
-		//   <disable xmlns='p1:push'>
-		// </iq>
-		
-		NSXMLElement *disable = [NSXMLElement elementWithName:@"disable" xmlns:@"p1:push"];
-		
-		XMPPIQ *iq = [XMPPIQ iqWithType:@"set" elementID:[XMPPStream generateUUID] child:disable];
-		
-		[xmppStream sendElement:iq];
-		pushConfigurationSent = YES;
-	}
+}
+
+- (void)sendDisablePushConfiguration
+{
+    // <iq type='set'>
+    //   <disable xmlns='p1:push'>
+    // </iq>
+    
+    NSXMLElement *disable = [NSXMLElement elementWithName:@"disable" xmlns:@"p1:push"];
+    
+    XMPPIQ *iq = [XMPPIQ iqWithType:@"set" elementID:[XMPPStream generateUUID] child:disable];
+    
+    [xmppStream sendElement:iq];
+    pushConfigurationSent = YES;
 }
 
 - (XMPPElementReceipt *)goOnStandby
