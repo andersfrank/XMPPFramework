@@ -48,7 +48,8 @@ NS_ASSUME_NONNULL_BEGIN
  * 
  * You may set the pushConfiguration element at any time.
  * If you set it after the xmpp stream has already authenticated, then the push settings will be sent right away.
- * Otherwise, the push settings will be sent as soon as the stream is authenticated.
+ * Otherwise, the push settings will be sent as soon as the stream is authenticated,
+ * regardless whether a new session was opened or a we authenticated through rebinding to and old session.
  * 
  * After the pushConfiguration element has been set, you can change it at any time.
  * If you do, it will send the updated configuration options to the server.

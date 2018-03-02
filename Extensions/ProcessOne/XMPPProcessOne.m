@@ -16,8 +16,6 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 @interface XMPPProcessOne ()
 {
 	NSXMLElement *pushConfiguration;
-	BOOL pushConfigurationSent;
-	BOOL pushConfigurationConfirmed;
 	NSString *pushIQID;
 }
 
@@ -36,8 +34,6 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 	if ((self = [super initWithDispatchQueue:NULL]))
 	{
 		pushConfiguration = nil;
-		pushConfigurationSent = YES;
-		pushConfigurationConfirmed = YES;
 	}
 	return self;
 }
@@ -115,8 +111,6 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 		}
 		
 		pushConfiguration = newPushConfiguration;
-		pushConfigurationSent = NO;
-		pushConfigurationConfirmed = NO;
 		
 		if ([xmppStream isAuthenticated])
 		{
@@ -140,7 +134,6 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 		XMPPIQ *iq = [XMPPIQ iqWithType:@"set" to:nil elementID:pushIQID child:push];
 		
 		[xmppStream sendElement:iq];
-		pushConfigurationSent = YES;
 	}
 }
 
@@ -155,7 +148,6 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
     XMPPIQ *iq = [XMPPIQ iqWithType:@"set" elementID:[XMPPStream generateUUID] child:disable];
     
     [xmppStream sendElement:iq];
-    pushConfigurationSent = YES;
 }
 
 - (XMPPElementReceipt *)goOnStandby
@@ -192,12 +184,11 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
 
 - (void)xmppStreamDidAuthenticate:(XMPPStream *)sender
 {
+    // According to ProcessOne support the push configuration packet should always be sent after authentication.
+    // Regardless whether we open a new session or we rebind to an old one.
+    [self sendPushConfiguration];
+    
     if (!xmppStream.isAttemptingRebind) {
-        if (!pushConfigurationSent)
-        {
-            [self sendPushConfiguration];
-        }
-        
         // Store information we could use for rebind
         NSString *streamID = [xmppStream rebindSessionID];
         self.savedSessionID = streamID;
@@ -205,24 +196,6 @@ NSString *const XMPPProcessOneSessionDate = @"XMPPProcessOneSessionDate";
         self.savedSessionDate = [[NSDate alloc] init];
     }
     xmppStream.attemptingRebind = NO;
-}
-
-- (void)xmppStreamDidDisconnect:(XMPPStream *)sender withError:(NSError *)error
-{
-	if (pushConfigurationConfirmed)
-	{
-		self.savedSessionDate = [[NSDate alloc] init];
-	}
-	else
-	{
-		// The pushConfiguration was sent to the server, but we never received a confirmation.
-		// So either the pushConfiguration never made it to the server,
-		// or we got disconnected before we received the confirmation from the server.
-		// 
-		// To be sure, we need to resent the pushConfiguration next time we authenticate.
-		
-		pushConfigurationSent = NO;
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
